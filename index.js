@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
+const ai = require("./ai");
 
 const app = express();
 const PORT = 3024;
@@ -268,6 +269,32 @@ app.post("/api/rounds/:roundId/resolve", (req, res) => {
     winners,
     message: `${round.result.winnerName} had the most liquidations (${maxLiquidations})!`
   });
+});
+
+// AI-powered endpoints
+app.get("/api/ai/risk-analysis", async (req, res) => {
+  try {
+    const allProtocols = Array.from(protocols.values());
+    const analysis = await ai.analyzeLiquidationRisk(allProtocols);
+    res.json({ success: true, analysis });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/ai/predict-round/:roundId", async (req, res) => {
+  try {
+    const round = rounds.get(req.params.roundId);
+    if (!round) return res.status(404).json({ error: "Round not found" });
+    const prediction = await ai.predictRound(round);
+    res.json({ success: true, roundId: req.params.roundId, prediction });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/ai/post-mortem", async (req, res) => {
+  try {
+    const roundResult = req.body;
+    const analysis = await ai.postMortem(roundResult);
+    res.json({ success: true, analysis });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Seed demo round
